@@ -63,7 +63,9 @@ define(function () {
             }
         }
         if (borrow > 0) {
-            result = String(borrow) + result;
+// Error in original code!!! Adding only result without prefixing leading zeros
+            result = String(borrow) + prefixZeros(result, leadingZeros);
+//            result = String(borrow) + result;
         }
         return result;
     }
@@ -123,7 +125,9 @@ define(function () {
             }
         }
         if (carry > 0) {
-            result = String(carry) + result;
+// Error in original code!!! Adding only result without prefixing leading zeros
+            result = String(carry) + prefixZeros(result, leadingZeros);
+//            result = String(carry) + result;
         }
         return result.length === 0 ? "0" : result;
     }
