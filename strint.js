@@ -42,6 +42,8 @@ define(function () {
         forcePositiveString(x);
         forcePositiveString(y);
 
+        if (eq(x, "0") && eq(y, "0")) return "0"; //otherwise an empty string is returned
+
         var maxLength = Math.max(x.length, y.length);
         var result = "";
         var borrow = 0;
@@ -144,6 +146,9 @@ define(function () {
 
         forcePositiveString(lhs);
         forcePositiveString(rhs);
+
+        if (eq(lhs, "0") || eq(rhs, "0")) return "0"; //otherwise an empty string is returned
+
         var result = "0";
         var digitCount = getDigitCount(rhs);
         for(var i=0; i<digitCount; i++) {
