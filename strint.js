@@ -220,12 +220,14 @@ define(function () {
         }
     };
 
-    var div = e.div = function (dividend, divisor) {
+    var div = e.div = function (dividend, divisor, floorNeg) {
         forceString(dividend);
         forceString(divisor);
 
         var absResult = quotientRemainderPositive(abs(dividend), abs(divisor))[0];
-        return (sameSign(dividend, divisor) ? absResult : negate(absResult));
+        if (!sameSign(dividend, divisor)) absResult = negate(absResult);
+        if (floorNeg && !eq(mul(absResult, divisor), dividend) && isNegative(absResult)) absResult = sub(absResult, "1"); //if floorNeg is omitted, it will evaluate to false
+        return absResult;
     }
 
     //------------------- Comparisons
