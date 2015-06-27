@@ -3,7 +3,7 @@
 if (typeof define !== 'function') { var define = require('amdefine')(module) }
 
 define(function () {
-    
+
     var e = {};
 
     //------------------- Addition
@@ -42,6 +42,8 @@ define(function () {
         forcePositiveString(x);
         forcePositiveString(y);
 
+        if (eq(x, "0") && eq(y, "0")) return "0"; //otherwise an empty string is returned
+
         var maxLength = Math.max(x.length, y.length);
         var result = "";
         var borrow = 0;
@@ -63,7 +65,7 @@ define(function () {
             }
         }
         if (borrow > 0) {
-            result = String(borrow) + result;
+            result = String(borrow) + prefixZeros(result, leadingZeros);
         }
         return result;
     }
@@ -123,7 +125,7 @@ define(function () {
             }
         }
         if (carry > 0) {
-            result = String(carry) + result;
+            result = String(carry) + prefixZeros(result, leadingZeros);
         }
         return result.length === 0 ? "0" : result;
     }
@@ -144,6 +146,9 @@ define(function () {
 
         forcePositiveString(lhs);
         forcePositiveString(rhs);
+
+        if (eq(lhs, "0") || eq(rhs, "0")) return "0"; //otherwise an empty string is returned
+
         var result = "0";
         var digitCount = getDigitCount(rhs);
         for(var i=0; i<digitCount; i++) {
@@ -220,12 +225,14 @@ define(function () {
         }
     };
 
-    var div = e.div = function (dividend, divisor) {
+    var div = e.div = function (dividend, divisor, floorNeg) {
         forceString(dividend);
         forceString(divisor);
 
         var absResult = quotientRemainderPositive(abs(dividend), abs(divisor))[0];
-        return (sameSign(dividend, divisor) ? absResult : negate(absResult));
+        if (!sameSign(dividend, divisor)) absResult = negate(absResult);
+        if (floorNeg && !eq(mul(absResult, divisor), dividend) && isNegative(absResult)) absResult = sub(absResult, "1"); //if floorNeg is omitted, it will evaluate to false
+        return absResult;
     }
 
     //------------------- Comparisons
