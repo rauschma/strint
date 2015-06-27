@@ -63,7 +63,7 @@ define(function () {
             }
         }
         if (borrow > 0) {
-            result = String(borrow) + result;
+            result = String(borrow) + prefixZeros(result, leadingZeros);
         }
         return result;
     }
