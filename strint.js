@@ -3,7 +3,7 @@
 if (typeof define !== 'function') { var define = require('amdefine')(module) }
 
 define(function () {
-    
+
     var e = {};
 
     //------------------- Addition
@@ -123,7 +123,7 @@ define(function () {
             }
         }
         if (carry > 0) {
-            result = String(carry) + result;
+            result = String(carry) + prefixZeros(result, leadingZeros);
         }
         return result.length === 0 ? "0" : result;
     }
