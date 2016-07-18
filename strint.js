@@ -1,9 +1,11 @@
 "use strict";
 
-if (typeof define !== 'function') { var define = require('amdefine')(module) }
+if (typeof define !== 'function') {
+    var define = require('amdefine')(module)
+}
 
 define(function () {
-    
+
     var e = {};
 
     //------------------- Addition
@@ -11,7 +13,7 @@ define(function () {
     var subPositive = e.subPositive = function (x, y) {
         forcePositiveString(x);
         forcePositiveString(y);
-        if (! ge(x, y)) {
+        if (!ge(x, y)) {
             throw new Error("x must be greater or equal to y");
         }
 
@@ -19,7 +21,7 @@ define(function () {
         var result = "";
         var borrow = 0;
         var leadingZeros = 0;
-        for (var i=0; i<maxLength; i++) {
+        for (var i = 0; i < maxLength; i++) {
             var lhs = Number(getDigit(x, i)) - borrow;
             borrow = 0;
             var rhs = Number(getDigit(y, i));
@@ -46,10 +48,13 @@ define(function () {
         var result = "";
         var borrow = 0;
         var leadingZeros = 0;
-        for (var i=0; i<maxLength; i++) {
+        for (var i = 0; i < maxLength; i++) {
             var lhs = Number(getDigit(x, i));
             var rhs = Number(getDigit(y, i));
             var digit = lhs + rhs + borrow;
+            if (isNaN(digit))
+                continue;
+
             borrow = 0;
             while (digit >= 10) {
                 digit -= 10;
@@ -65,16 +70,33 @@ define(function () {
         if (borrow > 0) {
             result = String(borrow) + result;
         }
+
         return result;
     }
     var add = e.add = function (x, y) {
         forceString(x);
         forceString(y);
+        
+        //convert to precise decimal points if applicable
+        var response = convertDigitsDecimal(x, y);
+        x = response.x;
+        y = response.y;
+        var result = "";
 
         if (isPositive(x) && isPositive(y)) {
-            return addPositive(x, y);
+
+            result = addPositive(x, y);
+            if (response.maxDecimalCount > 0)
+                return splitValue(result, result.length - response.maxDecimalCount)
+
+            return result;
         } else if (isNegative(x) && isNegative(y)) {
-            return negate(addPositive(abs(x), abs(y)));
+
+            result = negate(addPositive(abs(x), abs(y)));
+            if (response.maxDecimalCount > 0)
+                return splitValue(result, result.length - response.maxDecimalCount)
+
+            return result;
         } else {
             if (lt(abs(x), abs(y))) {
                 var tmp = x;
@@ -83,12 +105,22 @@ define(function () {
             }
             // |a| >= |b|
             var absResult = subPositive(abs(x), abs(y));
+            absResult = absResult.replace("NaN", "0");
+
             if (isPositive(x)) {
                 // Example: 5 + -3
-                return absResult;
+
+                result = absResult;
+                if (response.maxDecimalCount > 0)
+                    return splitValue(result, result.length - response.maxDecimalCount)
+
+                return result;
             } else {
                 // Example: -5 + 3
-                return negate(absResult);
+                result = negate(absResult);
+                if (response.maxDecimalCount > 0)
+                    return splitValue(result, result.length - response.maxDecimalCount)
+                return result;
             }
         }
     }
@@ -108,10 +140,10 @@ define(function () {
         var digitCount = getDigitCount(strint);
         var carry = 0;
         var leadingZeros = 0;
-        for(var i=0; i<digitCount; i++) {
+        for (var i = 0; i < digitCount; i++) {
             var digitResult = (Number(getDigit(strint, i)) * digit) + carry;
             carry = 0;
-            while(digitResult >= 10) {
+            while (digitResult >= 10) {
                 digitResult -= 10;
                 carry++;
             }
@@ -146,7 +178,7 @@ define(function () {
         forcePositiveString(rhs);
         var result = "0";
         var digitCount = getDigitCount(rhs);
-        for(var i=0; i<digitCount; i++) {
+        for (var i = 0; i < digitCount; i++) {
             var singleRow = mulDigit(lhs, Number(getDigit(rhs, i)));
             singleRow = shiftLeft(singleRow, i);
             result = addPositive(result, singleRow);
@@ -158,8 +190,22 @@ define(function () {
         forceString(lhs);
         forceString(rhs);
 
+        var response = convertDigitsDecimal(lhs, rhs);
+        lhs = response.x;
+        rhs = response.y;
+
+        if (response.maxDecimalCount > 0) {
+            lhs = lhs.split(".").join("");
+            rhs = rhs.split(".").join("");
+        }
+
         var absResult = mulPositive(abs(lhs), abs(rhs));
-        return (sameSign(lhs, rhs) ? absResult : negate(absResult));
+
+        var result = (sameSign(lhs, rhs) ? absResult : negate(absResult));
+        if (response.maxDecimalCount > 0)
+            return splitValue(result, result.length - (response.maxDecimalCount * 2))
+
+        return result;
     }
 
     //------------------- Division
@@ -187,15 +233,15 @@ define(function () {
         forcePositiveString(divisor);
 
         if (eq(dividend, divisor)) {
-            return [ "1", "0" ];
+            return ["1", "0"];
         }
         if (gt(divisor, dividend)) {
-            return [ "0", normalize(dividend) ];
+            return ["0", normalize(dividend)];
         }
         var quotient = "0";
         var remainingDigits = dividend.length - divisor.length;
 
-        while(true) {
+        while (true) {
             var digits = dividend.slice(0, dividend.length - remainingDigits);
 
             // Subtract as long as possible and count the times
@@ -208,7 +254,7 @@ define(function () {
             // Done already?
             if (gt(divisor, dividend)) { // holds (at the lastest) at remainingDigits === 0
                 quotient = shiftLeft(quotient, remainingDigits);
-                return [ quotient, normalize(dividend) ];
+                return [quotient, normalize(dividend)];
             }
 
             // Not done, shift
@@ -224,8 +270,30 @@ define(function () {
         forceString(dividend);
         forceString(divisor);
 
+        var response = convertDigitsDecimal(dividend, divisor);
+        dividend = response.x;
+        divisor = response.y;
+
+        if (response.maxDecimalCount > 0) {
+            dividend = dividend.split(".").join("");
+            divisor = divisor.split(".").join("");
+        }
+
         var absResult = quotientRemainderPositive(abs(dividend), abs(divisor))[0];
-        return (sameSign(dividend, divisor) ? absResult : negate(absResult));
+        var result = (sameSign(dividend, divisor) ? absResult : negate(absResult));
+        
+        var i = 0;
+        if (response.maxDecimalCount > 0) {
+            result = result + ".";
+            while (i < response.maxDecimalCount){
+                result = result + "0";
+                i++;
+            }
+                
+        }
+
+
+        return result;
     }
 
     //------------------- Comparisons
@@ -236,7 +304,7 @@ define(function () {
 
     var ltPositive = function (x, y) {
         if (isNegative(x) || isNegative(y)) {
-            throw new Error("Both operands must be positive: "+x+" "+y);
+            throw new Error("Both operands must be positive: " + x + " " + y);
         }
         var maxLength = Math.max(x.length, y.length);
         var lhs = leftPadZeros(x, maxLength);
@@ -298,7 +366,7 @@ define(function () {
         if (isNegative(strint)) {
             return strint.slice(1);
         } else {
-            return "-"+strint;
+            return "-" + strint;
         }
     }
 
@@ -312,9 +380,9 @@ define(function () {
         }
         var match = RE_NON_ZERO.exec(strint);
         if (!match) {
-            throw new Error("Illegal strint format: "+strint);
+            throw new Error("Illegal strint format: " + strint);
         }
-        return match[1]+match[2];
+        return match[1] + match[2];
     }
 
     /**
@@ -324,7 +392,7 @@ define(function () {
         forcePositiveString(strint);
         forceNonNegativeNumber(digitCount);
 
-        return prefixZeros(strint, digitCount-strint.length);
+        return prefixZeros(strint, digitCount - strint.length);
     }
 
     var prefixZeros = function (strint, zeroCount) {
@@ -332,14 +400,14 @@ define(function () {
         forceNonNegativeNumber(zeroCount);
 
         var result = strint;
-        for(var i=0; i<zeroCount; i++) {
+        for (var i = 0; i < zeroCount; i++) {
             result = "0" + result;
         }
         return result;
     }
 
     function shiftLeft(strint, digitCount) {
-        while(digitCount > 0) {
+        while (digitCount > 0) {
             strint = strint + "0";
             digitCount--;
         }
@@ -362,7 +430,7 @@ define(function () {
 
     var getDigitCount = function (strint) {
         if (isNegative(strint)) {
-            return strint.length -1;
+            return strint.length - 1;
         } else {
             return strint.length;
         }
@@ -373,28 +441,88 @@ define(function () {
     function forceString(value) {
         forceType(value, "string");
     }
+
     function forcePositiveString(value) {
         forceString(value);
         forceCondition(value, isPositive, "isPositive");
     }
+
     function forceNumber(value) {
         forceType(value, "number");
     }
+
     function forceNonNegativeNumber(value) {
         forceType(value, "number");
         if (value < 0) {
-            throw new Error("Expected a positive number: "+value);
+            throw new Error("Expected a positive number: " + value);
         }
     }
+
     function forceCondition(value, condition, conditionName) {
         if (!condition.call(null, value)) {
-            throw new Error("Condition "+conditionName+" failed for value "+value);
+            throw new Error("Condition " + conditionName + " failed for value " + value);
         }
     }
+
     function forceType(value, type) {
         if (typeof value !== type) {
-            throw new Error("Not a "+type+": "+value);
+            throw new Error("Not a " + type + ": " + value);
         }
+    }
+
+    function convertDigitsDecimal(x, y) {
+        var decimalIndexX = 0,
+            decimalIndexY = 0,
+            maxDecimalCount = 0;
+
+        if (x.indexOf(".") >= 0) {
+            decimalIndexX = x.length - x.indexOf(".") - 1;
+        }
+
+        if (y.indexOf(".") >= 0) {
+            decimalIndexY = y.length - y.indexOf(".") - 1;
+        }
+
+        if (decimalIndexX == 0)
+            x = x + ".";
+
+        if (decimalIndexY == 0)
+            y = y + ".";
+
+        if (decimalIndexX == 0 && decimalIndexY == 0) {
+            x = x.slice(0, x.length - 1);
+            y = y.slice(0, y.length - 1);
+        }
+
+        var i = 0;
+        if (decimalIndexX > decimalIndexY) {
+            while (i < (decimalIndexX - decimalIndexY)) {
+                y = y + "0";
+                i++;
+            }
+            maxDecimalCount = decimalIndexX;
+        }
+
+        i = 0;
+        if (decimalIndexY > decimalIndexX) {
+            while (i < (decimalIndexY - decimalIndexX)) {
+                x = x + "0";
+                i++;
+            }
+            maxDecimalCount = decimalIndexY;
+        }
+        if (decimalIndexX == decimalIndexY)
+            maxDecimalCount = decimalIndexX;
+
+        return {
+            'x': x,
+            'y': y,
+            'maxDecimalCount': maxDecimalCount
+        }
+    }
+
+    function splitValue(value, index) {
+        return value.substring(0, index) + "." + value.substring(index);
     }
 
     //-------------------
