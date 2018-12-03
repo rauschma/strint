@@ -111,7 +111,7 @@ define(function () {
         for(var i=0; i <= digitCount; i++) {
             var digitResult = (Number(getDigit(strint, i)) * digit) + carry;
             carry = parseInt(digitResult/10,10);
-			digitResult = digitResult % 10;
+	    digitResult = digitResult % 10;
             if (digitResult === 0) {
                 leadingZeros++;
             } else {
