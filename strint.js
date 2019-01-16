@@ -63,7 +63,7 @@ define(function () {
             }
         }
         if (borrow > 0) {
-            result = String(borrow) + result;
+            result = String(borrow * Math.pow(10, leadingZeros)) + result;
         }
         return result;
     }
@@ -108,13 +108,10 @@ define(function () {
         var digitCount = getDigitCount(strint);
         var carry = 0;
         var leadingZeros = 0;
-        for(var i=0; i<digitCount; i++) {
+        for(var i=0; i<=digitCount; i++) {
             var digitResult = (Number(getDigit(strint, i)) * digit) + carry;
-            carry = 0;
-            while(digitResult >= 10) {
-                digitResult -= 10;
-                carry++;
-            }
+            carry = parseInt(digitResult/10,10);
+            digitResult = digitResult % 10;
             if (digitResult === 0) {
                 leadingZeros++;
             } else {
